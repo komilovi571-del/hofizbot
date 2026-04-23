@@ -30,9 +30,11 @@ from aiogram.enums import ParseMode
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
 from bot.config import Config, load_config
-from bot.handlers import admin, download, inline, shazam, start
+from bot.handlers import admin, admin_channels, download, inline, shazam, start
+from bot.middlewares.i18n import I18nMiddleware
 from bot.middlewares.throttle import LoggingMiddleware, ThrottleMiddleware
 from bot.services.cache import CacheService
+from bot.services.channels import ChannelsService
 from bot.services.downloader import Downloader
 from bot.services.stats import StatsService
 from bot.utils.helpers import check_dependencies, print_startup_banner
@@ -66,10 +68,13 @@ async def on_startup(
     config: Config,
     cache_service: CacheService,
     stats_service: StatsService,
+    channels_service: ChannelsService,
 ) -> None:
     """Bot ishga tushganda."""
     # Redis ulanish
     await cache_service.connect()
+    # Channels service ga redis client'ni uzatish
+    channels_service.set_redis(cache_service.redis)
 
     # Stats debounced flush vazifasini ishga tushirish
     stats_service.start_background_flush()
@@ -158,6 +163,9 @@ async def main() -> None:
         ttl=config.redis.cache_ttl,
     )
 
+    # Channels service — admin kanallarini Redis'da saqlash
+    channels_service = ChannelsService()
+
     # Downloader (yt-dlp + fastdl)
     downloader = Downloader(
         temp_dir=config.download.temp_dir,
@@ -197,9 +205,15 @@ async def main() -> None:
         rate_limit=config.download.rate_limit_per_minute,
         admin_ids=config.admin_ids,
     ))
+    # i18n — foydalanuvchi tilini aniqlash va inject qilish
+    i18n_mw = I18nMiddleware()
+    dp.message.middleware(i18n_mw)
+    dp.callback_query.middleware(i18n_mw)
+    dp.inline_query.middleware(i18n_mw)
 
     # Router registratsiyasi
     dp.include_router(admin.router)    # Admin — /admin, /user (eng birinchi)
+    dp.include_router(admin_channels.router)  # Admin — kanal boshqaruvi
     dp.include_router(start.router)
     dp.include_router(shazam.router)   # Shazam — audio/voice aniqlash
     dp.include_router(inline.router)   # Inline — musiqa qidirish
@@ -210,10 +224,11 @@ async def main() -> None:
     dp["downloader"] = downloader
     dp["config"] = config
     dp["stats_service"] = stats_service
+    dp["channels_service"] = channels_service
 
     # Startup/Shutdown hooks
     async def _on_startup() -> None:
-        await on_startup(bot, config, cache_service, stats_service)
+        await on_startup(bot, config, cache_service, stats_service, channels_service)
 
     async def _on_shutdown() -> None:
         await on_shutdown(bot, config, cache_service, stats_service)

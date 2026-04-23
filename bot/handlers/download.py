@@ -28,6 +28,7 @@ from aiogram.types import (
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.config import Config
+from bot.i18n import t
 from bot.keyboards.inline import (
     get_cancel_keyboard,
     get_format_keyboard,
@@ -169,6 +170,7 @@ async def handle_url(
     cache_service: CacheService,
     stats_service: StatsService = None,
     config: Config = None,
+    lang: str = "uz",
 ) -> None:
     """Foydalanuvchi yuborgan URL yoki qo'shiq nomini qabul qilish."""
 
@@ -189,15 +191,12 @@ async def handle_url(
         await message.reply(parsed.error_message, parse_mode="HTML")
         return
 
-    # Rate limit ThrottleMiddleware tomonidan bajariladi — bu yerda takroran yo'q
-
     # Foydalanuvchi yuklanishlari sonini tekshirish
     max_per_user = config.download.max_per_user if config else 3
     active = await cache_service.get_user_downloads(message.from_user.id)
     if active >= max_per_user:
         await message.reply(
-            f"⏳ <b>Bir vaqtda {max_per_user} ta yuklab olish mumkin.</b>\n\n"
-            "Oldingi yuklanishlar tugashini kuting.",
+            t("err_too_many_active", lang, count=max_per_user),
             parse_mode="HTML",
         )
         return
@@ -208,8 +207,7 @@ async def handle_url(
 
     # Format tanlash keyboard
     await message.reply(
-        f"{platform_name} havolasi aniqlandi!\n\n"
-        f"📥 <b>Nima yuklab olmoqchisiz?</b>",
+        t("dl_detected", lang, platform=platform_name),
         parse_mode="HTML",
         reply_markup=get_format_keyboard(url_hash),
     )
@@ -1008,7 +1006,12 @@ async def _download_and_send(
 
             # Stats: muvaffaqiyatli yuklangan yozuvni oshirish
             if stats_service and user_id_for_stats:
-                stats_service.increment_downloads(user_id_for_stats)
+                # Platform'ni URL'dan aniqlash (tracking uchun)
+                try:
+                    plat = parse_url(url).platform.value if url else ""
+                except Exception:
+                    plat = ""
+                stats_service.increment_downloads(user_id_for_stats, platform=plat)
 
         # Status xabarni o'chirish
         try:

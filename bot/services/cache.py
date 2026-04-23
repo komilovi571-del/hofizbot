@@ -51,6 +51,11 @@ class CacheService:
             await self._redis.close()
             logger.info("Redis ulanish yopildi")
 
+    @property
+    def redis(self) -> redis.Redis | None:
+        """Xom Redis client (boshqa servislar foydalanishi uchun)."""
+        return self._redis
+
     @staticmethod
     def _make_key(url: str, media_type: str, quality: str = "") -> str:
         """Cache kalitini yaratish."""

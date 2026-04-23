@@ -150,8 +150,8 @@ class StatsService:
 
             self._mark_dirty()
 
-    def increment_downloads(self, user_id: int = 0):
-        """Yuklanishlar sonini oshirish."""
+    def increment_downloads(self, user_id: int = 0, platform: str = ""):
+        """Yuklanishlar sonini oshirish (platform ixtiyoriy: youtube/instagram/...)."""
         with self._lock:
             self._data["total_downloads"] = self._data.get("total_downloads", 0) + 1
             today = datetime.now().strftime("%Y-%m-%d")
@@ -159,6 +159,12 @@ class StatsService:
             self._data["daily_downloads"][today] = (
                 self._data["daily_downloads"].get(today, 0) + 1
             )
+
+            # Platform statistikasi
+            if platform:
+                plat = self._data.setdefault("platforms", {})
+                key = platform.lower()
+                plat[key] = plat.get(key, 0) + 1
 
             if user_id:
                 uid = str(user_id)
@@ -206,7 +212,22 @@ class StatsService:
             "today_downloads": daily_downloads.get(today, 0),
             "today_active_users": len(self._daily_users_sets.get(today, set())),
             "top_users": self._get_top_users(10),
+            "daily_downloads": dict(daily_downloads),
+            "daily_active_users": {d: len(u) for d, u in self._daily_users_sets.items()},
+            "platforms": dict(self._data.get("platforms", {})),
+            "banned_count": sum(
+                1 for u in self._data.get("users", {}).values() if u.get("banned")
+            ),
+            "languages": self._lang_breakdown(),
         }
+
+    def _lang_breakdown(self) -> dict:
+        """Foydalanuvchilar til bo'yicha taqsimoti."""
+        result: dict[str, int] = {}
+        for u in self._data.get("users", {}).values():
+            lng = u.get("lang") or "unset"
+            result[lng] = result.get(lng, 0) + 1
+        return result
 
     def _get_top_users(self, limit: int = 10) -> list[dict]:
         """Eng ko'p yuklagan foydalanuvchilar."""
@@ -255,6 +276,34 @@ class StatsService:
         uid = str(user_id)
         user = self._data.get("users", {}).get(uid, {})
         return user.get("banned", False)
+
+    # ===== Til (i18n) =====
+
+    def get_lang(self, user_id: int) -> str | None:
+        """Foydalanuvchining saqlangan tilini olish (None — hali tanlamagan)."""
+        uid = str(user_id)
+        user = self._data.get("users", {}).get(uid)
+        if not user:
+            return None
+        return user.get("lang")
+
+    def set_lang(self, user_id: int, lang: str) -> None:
+        """Foydalanuvchi tilini saqlash."""
+        with self._lock:
+            uid = str(user_id)
+            users = self._data.setdefault("users", {})
+            if uid not in users:
+                today = datetime.now().strftime("%Y-%m-%d")
+                users[uid] = {
+                    "username": "",
+                    "full_name": "",
+                    "first_seen": today,
+                    "last_seen": today,
+                    "downloads": 0,
+                    "searches": 0,
+                }
+            users[uid]["lang"] = lang
+            self._mark_dirty()
 
     def cleanup_old_daily(self, keep_days: int = 30):
         """Eski kunlik statistikani tozalash."""
