@@ -172,13 +172,15 @@ async def main() -> None:
     # ====== Bot yaratish ======
 
     # Session — Local Bot API server yoki standart API
-    session = None
+    # Katta fayllarni yuklashda timeout yetarli bo'lishi uchun 300s
     if config.telegram_api.local_bot_api_url:
         local_server = TelegramAPIServer.from_base(
             config.telegram_api.local_bot_api_url,
         )
-        session = AiohttpSession(api=local_server)
+        session = AiohttpSession(api=local_server, timeout=300)
         logger.info(f"Local Bot API: {config.telegram_api.local_bot_api_url}")
+    else:
+        session = AiohttpSession(timeout=300)
 
     bot = Bot(
         token=config.bot.token,

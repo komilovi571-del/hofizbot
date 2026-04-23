@@ -42,7 +42,7 @@ from bot.services.downloader import (
     VideoQuality,
 )
 from bot.services.audio_extractor import compress_video, ensure_h264
-from bot.services.shazam import recognize_from_telegram_file, search_and_download_song, search_songs
+from bot.services.shazam import recognize_from_telegram_file, recognize_song, search_and_download_song, search_songs
 from bot.services.stats import StatsService
 from bot.services.url_parser import (
     Platform,
@@ -1026,6 +1026,74 @@ async def _download_and_send(
         await cache_service.decrement_user_downloads(user_id)
 
 
+async def _auto_shazam_video(
+    bot: Bot,
+    chat_id: int,
+    reply_to_message_id: int,
+    video_path: str,
+) -> None:
+    """Yuborilgan videodagi qo'shiqni avtomatik Shazam orqali aniqlash.
+
+    Shazamio mp4/webm fayllarni to'g'ridan-to'g'ri qabul qiladi (ichki ffmpeg).
+    Xatoliklar loglanadi, lekin asosiy oqimga ta'sir qilmaydi.
+    """
+    if not os.path.exists(video_path):
+        return
+    try:
+        sh_result = await asyncio.wait_for(recognize_song(video_path), timeout=30)
+    except asyncio.TimeoutError:
+        logger.info("Auto-shazam: timeout (30s)")
+        return
+    except Exception as e:
+        logger.info(f"Auto-shazam: xato — {e}")
+        return
+
+    if not sh_result.found:
+        return
+
+    # Natijani saqlash — yuklab olish tugmasi bosilsa ishlatiladi
+    result_id = hashlib.md5(
+        f"{sh_result.title}:{sh_result.artist}".encode()
+    ).hexdigest()[:12]
+    # Shazam handler moduli bilan bo'lishish
+    try:
+        from bot.handlers.shazam import _shazam_results
+        _shazam_results[result_id] = {
+            "title": sh_result.title,
+            "artist": sh_result.artist,
+        }
+    except Exception:
+        pass
+
+    text_parts = [
+        "🎵 <b>Videodagi qo'shiq aniqlandi:</b>",
+        f"🎤 <b>{sh_result.artist}</b>",
+        f"🎶 <i>{sh_result.title}</i>",
+    ]
+    if sh_result.album:
+        text_parts.append(f"💿 Albom: {sh_result.album}")
+    if sh_result.year:
+        text_parts.append(f"📅 Yil: {sh_result.year}")
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="⬇️ Qo'shiqni yuklab olish", callback_data=f"shazam_dl:{result_id}")
+    if sh_result.shazam_url:
+        kb.button(text="🔗 Shazam", url=sh_result.shazam_url)
+    kb.adjust(1)
+
+    try:
+        await bot.send_message(
+            chat_id=chat_id,
+            text="\n".join(text_parts),
+            parse_mode="HTML",
+            reply_to_message_id=reply_to_message_id,
+            reply_markup=kb.as_markup(),
+            disable_web_page_preview=True,
+        )
+    except Exception as e:
+        logger.warning(f"Auto-shazam xabar yuborishda xato: {e}")
+
+
 async def _send_file(
     bot: Bot,
     chat_id: int,
@@ -1073,6 +1141,11 @@ async def _send_file(
                 supports_streaming=True,
                 reply_markup=reply_markup,
             )
+            # Avtomatik Shazam — videodagi qo'shiqni aniqlash
+            try:
+                await _auto_shazam_video(bot, chat_id, sent.message_id, result.file_path)
+            except Exception as e:
+                logger.warning(f"Auto-shazam xato: {e}")
         else:
             caption = (
                 f"🎵 <b>{result.title}</b>\n"
