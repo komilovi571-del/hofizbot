@@ -80,6 +80,41 @@ def _file_limit(config: Config | None) -> int:
     return TELEGRAM_FILE_LIMIT_DEFAULT
 
 
+def _friendly_error(err: str) -> str:
+    """yt-dlp xatolarini foydalanuvchi uchun tushunarli matnga aylantirish."""
+    e = (err or "").lower()
+    if "rate-limit" in e or "rate limit" in e or "too many requests" in e:
+        return (
+            "⏱ Instagram vaqtincha bloklab qo‘ydi (rate-limit).\n"
+            "• 1-2 daqiqadan so‘ng qayta urinib ko‘ring\n"
+            "• Yoki boshqa platforma havolasini yuboring"
+        )
+    if "login required" in e or "login_required" in e or "requires authentication" in e:
+        return (
+            "🔒 Bu post yopiq yoki login talab qiladi.\n"
+            "• Ochiq (public) post havolasini yuboring\n"
+            "• Yoki boshqa platformadan urinib ko‘ring"
+        )
+    if "not available" in e or "content is not available" in e:
+        return (
+            "🚫 Kontent mavjud emas yoki o‘chirib tashlangan.\n"
+            "Boshqa havola yuboring."
+        )
+    if "private" in e:
+        return "🔒 Bu post <b>private</b> — faqat ochiq postlarni yuklab bo‘ladi."
+    if "geo" in e or "unavailable in your country" in e:
+        return "🌍 Video geografik cheklangan."
+    if "unsupported url" in e or "no video found" in e:
+        return "❌ Havola qo‘llab-quvvatlanmaydi yoki video topilmadi."
+    if "http error 404" in e:
+        return "❌ Havola topilmadi (404). Noto‘g‘ri yoki o‘chirilgan post."
+    # Fallback — qisqa versiya
+    short = err.replace("ERROR:", "").strip()
+    if len(short) > 200:
+        short = short[:200] + "..."
+    return f"❌ {short}"
+
+
 def _hash_url(url: str) -> str:
     """URL dan qisqa hash yaratish (callback_data uchun max 64 bayt)."""
     h = hashlib.md5(url.encode()).hexdigest()[:12]
@@ -864,8 +899,8 @@ async def _download_and_send(
 
         if not result.success:
             await status_msg.edit_text(
-                f"❌ <b>Xato:</b> {result.error_message}\n\n"
-                f"Qaytadan urinib ko'ring yoki boshqa havola yuboring.",
+                f"{_friendly_error(result.error_message)}\n\n"
+                f"🔁 Qaytadan urinib ko‘ring yoki boshqa havola yuboring.",
                 parse_mode="HTML",
             )
             return
@@ -1135,8 +1170,8 @@ async def _download_and_send_ext_audio(
 
         if not result.success:
             await status_msg.edit_text(
-                f"❌ <b>Xato:</b> {result.error_message}\n\n"
-                f"Qaytadan urinib ko'ring yoki boshqa havola yuboring.",
+                f"{_friendly_error(result.error_message)}\n\n"
+                f"🔁 Qaytadan urinib ko‘ring yoki boshqa havola yuboring.",
                 parse_mode="HTML",
             )
             return

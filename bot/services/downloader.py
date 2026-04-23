@@ -116,6 +116,41 @@ def _build_fastdl_args(connections: int = 16, split: int = 16, min_split_size: s
     ]
 
 
+# Platformaga xos User-Agent
+_UA_DESKTOP = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+_UA_IPHONE = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+)
+_UA_INSTAGRAM_APP = (
+    "Instagram 292.0.0.18.109 (iPhone14,3; iOS 17_5; en_US; en; scale=3.00; 1284x2778; 508527186)"
+)
+
+
+def _detect_platform(url: str) -> str:
+    u = (url or "").lower()
+    if "instagram.com" in u or "instagr.am" in u:
+        return "instagram"
+    if "tiktok.com" in u:
+        return "tiktok"
+    if "facebook.com" in u or "fb.watch" in u or "fb.com" in u:
+        return "facebook"
+    if "youtube.com" in u or "youtu.be" in u:
+        return "youtube"
+    if "twitter.com" in u or "x.com" in u:
+        return "twitter"
+    if "snapchat.com" in u:
+        return "snapchat"
+    if "pinterest." in u or "pin.it" in u:
+        return "pinterest"
+    if "likee." in u or "like-video.com" in u:
+        return "likee"
+    return "generic"
+
+
 def _build_ydl_opts(
     media_type: MediaType,
     quality: VideoQuality = VideoQuality.BEST,
@@ -127,8 +162,19 @@ def _build_ydl_opts(
     progress_callback: Callable | None = None,
     cookies_file: str = "",
     proxy: str = "",
+    url: str = "",
 ) -> dict[str, Any]:
     """yt-dlp opsiyalarini yaratish."""
+
+    platform = _detect_platform(url)
+
+    # Platformaga ko'ra User-Agent tanlash
+    if platform == "instagram":
+        user_agent = _UA_IPHONE
+    elif platform in ("tiktok", "snapchat", "likee"):
+        user_agent = _UA_IPHONE
+    else:
+        user_agent = _UA_DESKTOP
 
     # Asosiy opsiyalar
     opts: dict[str, Any] = {
@@ -141,17 +187,29 @@ def _build_ydl_opts(
         "noplaylist": True,
         # TLS sertifikat tekshiruvi yoqilgan (MITM himoyasi)
         "nocheckcertificate": False,
-        "socket_timeout": 20,
-        "retries": 3,
-        "fragment_retries": 3,
-        "extractor_retries": 3,
+        "socket_timeout": 30,
+        "retries": 5,
+        "fragment_retries": 5,
+        "extractor_retries": 5,
         "concurrent_fragment_downloads": 8,
+        "sleep_interval_requests": 1,
         "http_headers": {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "User-Agent": user_agent,
             "Accept-Language": "en-US,en;q=0.9",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
     }
+
+    # Instagram uchun maxsus extractor argumentlari (rate-limit bypass)
+    if platform == "instagram":
+        opts["extractor_args"] = {
+            "instagram": {
+                "app_id": ["936619743392459"],  # Instagram Web App ID
+            }
+        }
+        # Instagram agressiv rate-limit qo'yadi — ko'proq kutish
+        opts["sleep_interval"] = 2
+        opts["max_sleep_interval"] = 5
 
     # Cookies fayl mavjud bo'lsa qo'shish (Instagram, Facebook va h.k. uchun)
     if cookies_file and os.path.exists(cookies_file):
@@ -318,6 +376,7 @@ class Downloader:
             temp_dir=self.temp_dir,
             cookies_file=self.cookies_file,
             proxy=self.proxy,
+            url=url,
         )
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
@@ -353,6 +412,7 @@ class Downloader:
                 fastdl_min_split_size=self.fastdl_min_split_size,
                 cookies_file=self.cookies_file,
                 proxy=self.proxy,
+                url=url,
             )
 
             logger.info(f"Yuklab olish boshlandi: {url} | type={media_type.value} | quality={quality.value}")

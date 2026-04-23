@@ -17,6 +17,8 @@ Tezlik optimizatsiyalari:
 
 import asyncio
 import logging
+import os
+import base64
 import sys
 from pathlib import Path
 
@@ -131,6 +133,19 @@ async def main() -> None:
     if not deps.get("yt-dlp"):
         print("❌ yt-dlp o'rnatilmagan! pip install yt-dlp")
         sys.exit(1)
+
+    # Cookies env var'dan faylga yozish (Instagram/YouTube rate-limit bypass uchun)
+    # COOKIES_B64 — Netscape cookies.txt fayl base64 kodlangan holda
+    cookies_b64 = os.getenv("COOKIES_B64", "").strip()
+    if cookies_b64 and not config.download.cookies_file:
+        try:
+            cookies_path = Path(config.download.temp_dir) / "cookies.txt"
+            cookies_path.parent.mkdir(parents=True, exist_ok=True)
+            cookies_path.write_bytes(base64.b64decode(cookies_b64))
+            config.download.cookies_file = str(cookies_path)
+            logger.info(f"Cookies env var'dan yozildi: {cookies_path}")
+        except Exception as e:
+            logger.warning(f"COOKIES_B64 decode xatosi: {e}")
 
     # ====== Servislar yaratish ======
 

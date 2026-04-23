@@ -4,72 +4,87 @@ Start Handler — /start va /help buyruqlari.
 
 from aiogram import Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import Message
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 
 router = Router(name="start")
 
 
-WELCOME_TEXT = """
-🎬 <b>Media Downloader Bot</b>
+WELCOME_TEXT = """🔥 Assalomu alaykum. @hofizbot ga Xush kelibsiz. Bot orqali quyidagilarni yuklab olishingiz mumkin:
 
-Ijtimoiy tarmoqlardan video va musiqa yuklab beruvchi eng tez bot!
+• Instagram — post va IGTV + audio bilan;
+• TikTok — suv belgisiz video + audio bilan;
+• Snapchat — suv belgisiz video + audio bilan;
+• Likee — suv belgisiz video + audio bilan;
+• Pinterest — suv belgisiz video va rasmlar + audio bilan;
 
-⚡ <b>Tezlik:</b> aria2c bilan 16 ta parallel ulanish — 3-10x tezroq yuklash!
+Shazam funksiya:
+• Qo‘shiq nomi yoki ijrochi ismi
+• Qo‘shiq matni
+• Ovozli xabar
+• Video
+• Audio
+• Video xabar
 
-📎 <b>Platformalar:</b>
-• 🎬 YouTube  • 📸 Instagram  • 🎵 TikTok
-• 📘 Facebook  • 🐦 Twitter/X
-• 📌 Pinterest  • ❤️ Likee  • 👻 Snapchat
-• 🟠 Reddit  • 🎧 Spotify
+🚀 Yuklab olmoqchi bo‘lgan videoga havolani yuboring!
+😎 Bot guruhlarda ham ishlay oladi!"""
 
-📥 <b>Ishlatish:</b>
-1️⃣ Video/musiqa havolasini yuboring
-2️⃣ Yoki qo‘shiq nomini yozing — topib beraman!
-3️⃣ Audio/voice/video yuboring — Shazam bilan aniqlash
-
-🎵 <b>Inline rejim:</b> @hofizbot qo‘shiq nomi
-
-/help — Yordam
-/admin — Admin panel
-/myid — Telegram ID
-"""
-
-HELP_TEXT = """
-📖 <b>Yordam</b>
+HELP_TEXT = """📖 <b>Yordam</b>
 
 <b>📥 Video yuklash:</b>
 Havolani yuboring → "🎬 Video" tugmasini bosing → Sifat tanlang
 
 <b>🎵 Musiqa yuklash:</b>
 Havolani yuboring → "🎵 Musiqa" tugmasini bosing
-Yoki video yuklagandan keyin "🎵 Musiqani yuklab olish" tugmasini bosing
 
 <b>🔍 Musiqa qidirish:</b>
-Qo'shiq nomi yoki san'atkor ismini yozing → natijalardan tanlang
+Qo‘shiq nomi yoki san'atkor ismini yozing
 
 <b>🎵 Inline rejim:</b>
-Har qanday chatda <code>@hofizbot qo'shiq nomi</code> yozing
+<code>@hofizbot qo‘shiq nomi</code>
 
-<b>🔍 Shazam (musiqa aniqlash):</b>
+<b>🔍 Shazam:</b>
 Audio, voice, video yoki video note yuboring
-Bot Shazam orqali qo'shiqni aniqlaydi va yuklab beradi
-
-<b>📎 Platformalar:</b>
-• YouTube • Instagram • TikTok
-• Facebook • Twitter/X • Pinterest
-• Likee • Snapchat • Reddit • Spotify
 
 <b>⚠️ Cheklovlar:</b>
-• Daqiqada 5 ta so'rov
+• Daqiqada 5 ta so‘rov
 • Bir vaqtda 3 ta yuklash
-• Max fayl: 2GB
+• Max fayl: 50MB (Telegram limiti)
 """
+
+
+def _start_keyboard() -> InlineKeyboardMarkup:
+    """Start xabari uchun inline klaviatura — guruhga qo‘shish tugmasi."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ Guruhga qo‘shish",
+                    url="https://t.me/hofizbot?startgroup=true",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="💬 Inline qidiruv",
+                    switch_inline_query_current_chat="",
+                ),
+            ],
+        ]
+    )
 
 
 @router.message(CommandStart())
 async def cmd_start(message: Message) -> None:
     """Bot ishga tushirilganda."""
-    await message.answer(WELCOME_TEXT, parse_mode="HTML")
+    await message.answer(
+        WELCOME_TEXT,
+        parse_mode="HTML",
+        reply_markup=_start_keyboard(),
+        disable_web_page_preview=True,
+    )
 
 
 @router.message(Command("help"))
