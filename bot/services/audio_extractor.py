@@ -310,11 +310,11 @@ def check_ffmpeg_available() -> bool:
         return False
 
 
-def check_aria2c_available() -> bool:
-    """aria2c o'rnatilganligini tekshirish."""
+def check_fastdl_available() -> bool:
+    """fastdl o'rnatilganligini tekshirish."""
     try:
         result = subprocess.run(
-            ["aria2c", "--version"],
+            ["fastdl", "--version"],
             capture_output=True,
             timeout=5,
         )

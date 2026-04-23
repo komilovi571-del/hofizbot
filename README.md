@@ -6,7 +6,7 @@ Ijtimoiy tarmoqlardan video va musiqa yuklab beruvchi **超 tezkor** Telegram bo
 
 | Texnologiya | Tezlashtirish |
 |---|---|
-| **aria2c** (16 parallel connections) | 3-10x tezroq yuklab olish |
+| **fastdl** (16 parallel connections) | 3-10x tezroq yuklab olish |
 | **Redis file_id cache** | Takroriy so'rovlar = 0 soniya |
 | **yt-dlp Python API** | Subprocess o'rniga in-process (50-200ms tejash) |
 | **uvloop** | 2x tezroq event loop (Linux) |
@@ -40,7 +40,7 @@ source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 
 # Tizim dasturlari (Linux)
-sudo apt install aria2 ffmpeg
+sudo apt install fastdl ffmpeg
 
 # Sozlamalar
 cp .env.example .env
@@ -103,8 +103,8 @@ REDIS_URL=redis://localhost:6379/0
 # Yuklab olish sozlamalari
 MAX_CONCURRENT_DOWNLOADS=20
 MAX_PER_USER_DOWNLOADS=3
-ARIA2C_CONNECTIONS=16
-ARIA2C_SPLIT=16
+fastdl_CONNECTIONS=16
+fastdl_SPLIT=16
 
 # Bot ishi rejimi
 BOT_MODE=polling          # polling yoki webhook
@@ -124,7 +124,7 @@ media-downloader-bot/
 │   │   └── download.py      # URL qabul qilish va yuklab olish
 │   ├── services/
 │   │   ├── url_parser.py    # Platform aniqlash
-│   │   ├── downloader.py    # yt-dlp + aria2c yuklovchi
+│   │   ├── downloader.py    # yt-dlp + fastdl yuklovchi
 │   │   ├── audio_extractor.py  # FFmpeg audio ajratish
 │   │   └── cache.py         # Redis kesh servisi
 │   ├── keyboards/
@@ -145,7 +145,7 @@ media-downloader-bot/
 ## 🔧 Tizim talablari
 
 - **Python** 3.12+
-- **aria2c** — tezkor yuklab oluvchi
+- **fastdl** — tezkor yuklab oluvchi
 - **ffmpeg** — audio/video qayta ishlash
 - **Redis** — kesh va rate limiting
 
@@ -158,11 +158,11 @@ Foydalanuvchi → Telegram API → Bot (aiogram 3.x)
                     │               │               │
               URL Parser      Redis Cache     Downloader
               (Platform       (file_id +      (yt-dlp +
-               aniqlash)       rate limit)     aria2c)
+               aniqlash)       rate limit)     fastdl)
                                                    │
                                               ┌────┴────┐
                                               │         │
-                                          aria2c    ffmpeg
+                                          fastdl    ffmpeg
                                         (16 conn)  (audio)
 ```
 

@@ -42,10 +42,10 @@ class DownloadConfig:
     max_file_size: int = 2_147_483_648  # 2GB
     rate_limit_per_minute: int = 5
 
-    # aria2c settings
-    aria2c_connections: int = 16
-    aria2c_split: int = 16
-    aria2c_min_split_size: str = "1M"
+    # fastdl settings
+    fastdl_connections: int = 16
+    fastdl_split: int = 16
+    fastdl_min_split_size: str = "1M"
 
     # Cookies fayl (Instagram va boshqa saytlar uchun)
     cookies_file: str = ""
@@ -106,9 +106,9 @@ def load_config() -> Config:
             max_per_user=int(os.getenv("MAX_PER_USER_DOWNLOADS", "3")),
             max_file_size=int(os.getenv("MAX_FILE_SIZE", "2147483648")),
             rate_limit_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "5")),
-            aria2c_connections=int(os.getenv("ARIA2C_CONNECTIONS", "16")),
-            aria2c_split=int(os.getenv("ARIA2C_SPLIT", "16")),
-            aria2c_min_split_size=os.getenv("ARIA2C_MIN_SPLIT_SIZE", "1M"),
+            fastdl_connections=int(os.getenv("fastdl_CONNECTIONS", "16")),
+            fastdl_split=int(os.getenv("fastdl_SPLIT", "16")),
+            fastdl_min_split_size=os.getenv("fastdl_MIN_SPLIT_SIZE", "1M"),
             cookies_file=os.getenv("COOKIES_FILE", ""),
             proxy=os.getenv("PROXY_URL", ""),
         ),

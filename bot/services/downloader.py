@@ -1,8 +1,8 @@
 """
-Downloader Service — yt-dlp + aria2c yordamida video/audio yuklab olish.
+Downloader Service — yt-dlp + fastdl yordamida video/audio yuklab olish.
 
 Tezlik optimizatsiyalari:
-- aria2c: 16 ta parallel ulanish, faylni bo'laklarga bo'lib yuklash (3-10x tezroq)
+- fastdl: 16 ta parallel ulanish, faylni bo'laklarga bo'lib yuklash (3-10x tezroq)
 - yt-dlp Python API: subprocess chaqiruvsiz, to'g'ridan-to'g'ri (50-200ms tejash)
 - ProcessPoolExecutor: CPU-bound yt-dlp ishlarini alohida jarayonda bajarish
 - tmpfs (/dev/shm): RAM diskda vaqtinchalik fayllar (disk I/O yo'q)
@@ -29,16 +29,16 @@ logger = logging.getLogger(__name__)
 # max_workers Downloader tomonidan belgilanadi (max_concurrent bilan mos).
 _thread_pool: ThreadPoolExecutor | None = None
 
-# aria2c mavjudligini tekshirish (bir marta)
-_aria2c_available: bool | None = None
+# fastdl mavjudligini tekshirish (bir marta)
+_fastdl_available: bool | None = None
 
 
-def is_aria2c_available() -> bool:
-    """aria2c o'rnatilganligini tekshirish (cached)."""
-    global _aria2c_available
-    if _aria2c_available is None:
-        _aria2c_available = shutil.which("aria2c") is not None
-    return _aria2c_available
+def is_fastdl_available() -> bool:
+    """fastdl o'rnatilganligini tekshirish (cached)."""
+    global _fastdl_available
+    if _fastdl_available is None:
+        _fastdl_available = shutil.which("fastdl") is not None
+    return _fastdl_available
 
 
 def get_thread_pool(max_workers: int = 8) -> ThreadPoolExecutor:
@@ -101,8 +101,8 @@ class DownloadResult:
     download_time: float = 0.0
 
 
-def _build_aria2c_args(connections: int = 16, split: int = 16, min_split_size: str = "1M") -> list[str]:
-    """aria2c tashqi yuklovchi argumentlarini yaratish."""
+def _build_fastdl_args(connections: int = 16, split: int = 16, min_split_size: str = "1M") -> list[str]:
+    """fastdl tashqi yuklovchi argumentlarini yaratish."""
     return [
         f"-x", str(connections),         # Max connections per server
         f"-s", str(split),               # Number of splits
@@ -121,9 +121,9 @@ def _build_ydl_opts(
     quality: VideoQuality = VideoQuality.BEST,
     audio_format: AudioFormat = AudioFormat.MP3,
     temp_dir: str = "./tmp",
-    aria2c_connections: int = 16,
-    aria2c_split: int = 16,
-    aria2c_min_split_size: str = "1M",
+    fastdl_connections: int = 16,
+    fastdl_split: int = 16,
+    fastdl_min_split_size: str = "1M",
     progress_callback: Callable | None = None,
     cookies_file: str = "",
     proxy: str = "",
@@ -163,11 +163,11 @@ def _build_ydl_opts(
         opts["proxy"] = proxy
         logger.debug(f"Proxy ishlatilmoqda: {proxy}")
 
-    # aria2c faqat o'rnatilgan bo'lsa ishlatiladi
-    if is_aria2c_available():
-        opts["external_downloader"] = "aria2c"
+    # fastdl faqat o'rnatilgan bo'lsa ishlatiladi
+    if is_fastdl_available():
+        opts["external_downloader"] = "fastdl"
         opts["external_downloader_args"] = {
-            "aria2c": _build_aria2c_args(aria2c_connections, aria2c_split, aria2c_min_split_size),
+            "fastdl": _build_fastdl_args(fastdl_connections, fastdl_split, fastdl_min_split_size),
         }
 
     if media_type == MediaType.VIDEO:
@@ -259,7 +259,7 @@ def _sync_extract_info(url: str, opts: dict[str, Any]) -> dict[str, Any]:
     """Video ma'lumotlarini yuklamasdan olish (sinxron)."""
     try:
         extract_opts = {**opts, "skip_download": True, "quiet": True}
-        # Extract info uchun aria2c kerak emas
+        # Extract info uchun fastdl kerak emas
         extract_opts.pop("external_downloader", None)
         extract_opts.pop("external_downloader_args", None)
 
@@ -283,24 +283,24 @@ class Downloader:
     """
     Asosiy yuklovchi sinf.
 
-    yt-dlp Python API + aria2c tashqi yuklovchi yordamida
+    yt-dlp Python API + fastdl tashqi yuklovchi yordamida
     ijtimoiy tarmoqlardan video/audio yuklab olish.
     """
 
     def __init__(
         self,
         temp_dir: str = "./tmp",
-        aria2c_connections: int = 16,
-        aria2c_split: int = 16,
-        aria2c_min_split_size: str = "1M",
+        fastdl_connections: int = 16,
+        fastdl_split: int = 16,
+        fastdl_min_split_size: str = "1M",
         max_concurrent: int = 20,
         cookies_file: str = "",
         proxy: str = "",
     ):
         self.temp_dir = temp_dir
-        self.aria2c_connections = aria2c_connections
-        self.aria2c_split = aria2c_split
-        self.aria2c_min_split_size = aria2c_min_split_size
+        self.fastdl_connections = fastdl_connections
+        self.fastdl_split = fastdl_split
+        self.fastdl_min_split_size = fastdl_min_split_size
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self.max_concurrent = max_concurrent
         self.cookies_file = cookies_file
@@ -338,7 +338,7 @@ class Downloader:
         """
         Video yoki audio yuklab olish (async).
 
-        aria2c bilan 16 ta parallel ulanish orqali 3-10x tezroq.
+        fastdl bilan 16 ta parallel ulanish orqali 3-10x tezroq.
         """
         start_time = time.time()
 
@@ -348,9 +348,9 @@ class Downloader:
                 quality=quality,
                 audio_format=audio_format,
                 temp_dir=self.temp_dir,
-                aria2c_connections=self.aria2c_connections,
-                aria2c_split=self.aria2c_split,
-                aria2c_min_split_size=self.aria2c_min_split_size,
+                fastdl_connections=self.fastdl_connections,
+                fastdl_split=self.fastdl_split,
+                fastdl_min_split_size=self.fastdl_min_split_size,
                 cookies_file=self.cookies_file,
                 proxy=self.proxy,
             )

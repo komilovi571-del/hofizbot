@@ -8,7 +8,7 @@ Ishlatish:
     python -m bot.main
 
 Tezlik optimizatsiyalari:
-    - aria2c: 16 ta parallel ulanish (3-10x tezroq)
+    - fastdl: 16 ta parallel ulanish (3-10x tezroq)
     - Redis cache: takroriy so'rovlar 0 soniyada
     - uvloop: tezlashtirilgan event loop
     - tmpfs: RAM diskda vaqtinchalik fayllar
@@ -143,12 +143,12 @@ async def main() -> None:
         ttl=config.redis.cache_ttl,
     )
 
-    # Downloader (yt-dlp + aria2c)
+    # Downloader (yt-dlp + fastdl)
     downloader = Downloader(
         temp_dir=config.download.temp_dir,
-        aria2c_connections=config.download.aria2c_connections,
-        aria2c_split=config.download.aria2c_split,
-        aria2c_min_split_size=config.download.aria2c_min_split_size,
+        fastdl_connections=config.download.fastdl_connections,
+        fastdl_split=config.download.fastdl_split,
+        fastdl_min_split_size=config.download.fastdl_min_split_size,
         max_concurrent=config.download.max_concurrent,
         cookies_file=config.download.cookies_file,
         proxy=config.download.proxy,
