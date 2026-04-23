@@ -896,7 +896,7 @@ async def _download_and_send(
 
         # 50MB dan katta bo'lsa — ffmpeg bilan siqish
         compressed_path = None
-        if result.filesize > TELEGRAM_FILE_LIMIT:
+        if result.filesize > file_limit:
             await status_msg.edit_text(
                 f"🗜 <b>Fayl katta ({_format_size(result.filesize)}), siqilmoqda...</b>\n\n"
                 f"⏱ Yuklab olish: {download_time:.1f}s\n"

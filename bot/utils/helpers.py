@@ -22,15 +22,15 @@ def check_dependencies() -> dict[str, bool]:
     except (FileNotFoundError, subprocess.TimeoutExpired):
         deps["ffmpeg"] = False
 
-    # aria2c
+    # fastdl
     try:
         result = subprocess.run(
-            ["aria2c", "--version"],
+            ["fastdl", "--version"],
             capture_output=True, timeout=5,
         )
-        deps["aria2c"] = result.returncode == 0
+        deps["fastdl"] = result.returncode == 0
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        deps["aria2c"] = False
+        deps["fastdl"] = False
 
     # yt-dlp
     try:
@@ -47,7 +47,7 @@ def print_startup_banner(deps: dict[str, bool]) -> None:
     banner = """
 ╔══════════════════════════════════════════════════╗
 ║     🎬 Media Downloader Bot                      ║
-║     ⚡ Powered by yt-dlp + aria2c                ║
+║     ⚡ Powered by yt-dlp + fastdl                ║
 ║     📥 YouTube • Instagram • TikTok • FB • X     ║
 ╚══════════════════════════════════════════════════╝
 """
@@ -62,10 +62,10 @@ def print_startup_banner(deps: dict[str, bool]) -> None:
     missing = [d for d, ok in deps.items() if not ok]
     if missing:
         logger.warning(f"⚠️ O'rnatilmagan dasturlar: {', '.join(missing)}")
-        if "aria2c" in missing:
+        if "fastdl" in missing:
             logger.warning(
-                "aria2c o'rnatilmagan! Yuklab olish sekinroq bo'ladi.\n"
-                "O'rnatish: sudo apt install aria2 (Linux) / choco install aria2 (Windows)"
+                "fastdl o'rnatilmagan! Yuklab olish sekinroq bo'ladi.\n"
+                "O'rnatish: sudo apt install fastdl (Linux) / choco install fastdl (Windows)"
             )
         if "ffmpeg" in missing:
             logger.warning(
