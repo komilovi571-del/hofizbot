@@ -22,16 +22,6 @@ def check_dependencies() -> dict[str, bool]:
     except (FileNotFoundError, subprocess.TimeoutExpired):
         deps["ffmpeg"] = False
 
-    # fastdl
-    try:
-        result = subprocess.run(
-            ["fastdl", "--version"],
-            capture_output=True, timeout=5,
-        )
-        deps["fastdl"] = result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        deps["fastdl"] = False
-
     # yt-dlp
     try:
         import yt_dlp
@@ -47,7 +37,7 @@ def print_startup_banner(deps: dict[str, bool]) -> None:
     banner = """
 ╔══════════════════════════════════════════════════╗
 ║     🎬 Media Downloader Bot                      ║
-║     ⚡ Powered by yt-dlp + fastdl                ║
+║     ⚡ Powered by yt-dlp                         ║
 ║     📥 YouTube • Instagram • TikTok • FB • X     ║
 ╚══════════════════════════════════════════════════╝
 """
@@ -62,11 +52,6 @@ def print_startup_banner(deps: dict[str, bool]) -> None:
     missing = [d for d, ok in deps.items() if not ok]
     if missing:
         logger.warning(f"⚠️ O'rnatilmagan dasturlar: {', '.join(missing)}")
-        if "fastdl" in missing:
-            logger.warning(
-                "fastdl o'rnatilmagan! Yuklab olish sekinroq bo'ladi.\n"
-                "O'rnatish: sudo apt install fastdl (Linux) / choco install fastdl (Windows)"
-            )
         if "ffmpeg" in missing:
             logger.warning(
                 "ffmpeg o'rnatilmagan! Audio ajratish ishlamaydi.\n"
