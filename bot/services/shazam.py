@@ -164,6 +164,12 @@ def _sync_search_download(query: str, temp_dir: str) -> dict:
             "socket_timeout": 30,
             "retries": 3,
             "default_search": "ytsearch",
+            # Railway datacenter IP bot-detection'ni aylantirish
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android", "web"],
+                },
+            },
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
@@ -173,33 +179,54 @@ def _sync_search_download(query: str, temp_dir: str) -> dict:
             ],
         }
 
+        # Qidiruv so'rovi turlari \u2014 birin-ketin sinaymiz
+        # Em-dash va qavslar YouTube qidiruvni buzadi
+        import re as _re
+        clean = _re.sub(r"[\u2013\u2014\u2015]", "-", query)  # em/en-dash -> -
+        simple = _re.sub(r"\s*\([^)]*\)", "", clean).strip()  # "(Remix)" olib tashlash
+        simple = _re.sub(r"\s+", " ", simple)
+
+        candidates = [clean, simple] if simple != clean else [clean]
+        # Qo'shimcha: "artist song" (dash'siz)
+        dashless = _re.sub(r"\s*[-\u2013\u2014]\s*", " ", simple)
+        if dashless not in candidates:
+            candidates.append(dashless)
+
+        last_error = "Natija topilmadi"
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(f"ytsearch:{query}", download=True)
+            for q in candidates:
+                if not q:
+                    continue
+                try:
+                    info = ydl.extract_info(f"ytsearch:{q}", download=True)
+                except Exception as e:
+                    last_error = str(e)[:200]
+                    continue
 
-            if info is None:
-                return {"success": False, "error": "Natija topilmadi"}
+                if info is None:
+                    continue
 
-            # ytsearch natijasi entries ichida bo'ladi
-            entries = info.get("entries", [])
-            if not entries:
-                return {"success": False, "error": "Natija topilmadi"}
+                entries = info.get("entries", [])
+                if not entries:
+                    continue
 
-            entry = entries[0]
-            filename = ydl.prepare_filename(entry)
+                entry = entries[0]
+                filename = ydl.prepare_filename(entry)
 
-            # Audio postprocessor kengaytmani o'zgartiradi
-            base = os.path.splitext(filename)[0]
-            for ext in ["mp3", "m4a", "opus", "ogg", "wav"]:
-                candidate = f"{base}.{ext}"
-                if os.path.exists(candidate):
-                    filename = candidate
-                    break
+                base = os.path.splitext(filename)[0]
+                for ext in ["mp3", "m4a", "opus", "ogg", "wav"]:
+                    candidate = f"{base}.{ext}"
+                    if os.path.exists(candidate):
+                        filename = candidate
+                        break
 
-            return {
-                "success": True,
-                "filename": filename,
-                "title": entry.get("title", "Noma'lum"),
-            }
+                return {
+                    "success": True,
+                    "filename": filename,
+                    "title": entry.get("title", "Noma'lum"),
+                }
+
+            return {"success": False, "error": last_error}
 
     except Exception as e:
         return {"success": False, "error": str(e)[:200]}
