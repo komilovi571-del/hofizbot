@@ -707,7 +707,7 @@ async def handle_video_download(
     # Cache tekshirish
     cached = await cache_service.get_file_id(url, "video", quality_str)
     if cached:
-        await _send_cached(callback.message, bot, cached, "video")
+        await _send_cached(callback.message, bot, cached, "video", url_hash=url_hash)
         return
 
     # Yuklab olish (yt-dlp)
@@ -801,12 +801,23 @@ async def _send_cached(
     bot: Bot,
     cached: dict,
     file_type: str,
+    url_hash: str = "",
 ) -> None:
     """Cache-dan file_id orqali darhol yuborish."""
     file_id = cached.get("file_id", "")
     title = cached.get("title", "Media")
     # Haqiqiy saqlangan tur (video/audio/document)
     actual_type = cached.get("file_type", file_type)
+
+    # Video uchun musiqa ajratish tugmasi
+    reply_markup = None
+    if actual_type == "video" and url_hash:
+        kb = InlineKeyboardBuilder()
+        kb.button(
+            text="🎵 Musiqani yuklab olish",
+            callback_data=f"ext_audio:{url_hash}",
+        )
+        reply_markup = kb.as_markup()
 
     try:
         await message.edit_text(
@@ -818,6 +829,7 @@ async def _send_cached(
                 chat_id=message.chat.id,
                 video=file_id,
                 caption=f"🎬 {title}\n⚡ Cache-dan yuborildi",
+                reply_markup=reply_markup,
             )
         elif actual_type == "audio":
             await bot.send_audio(

@@ -35,14 +35,14 @@ def _build_shazam_keyboard(result_id: str):
     return builder.as_markup()
 
 
-@router.message(F.audio | F.voice | F.video_note)
+@router.message(F.audio | F.voice | F.video_note | F.video)
 async def handle_audio_for_shazam(
     message: Message,
     bot: Bot,
     downloader: Downloader = None,
     stats_service: StatsService = None,
 ) -> None:
-    """Audio/voice/video_note yuborilganda Shazam orqali aniqlash."""
+    """Audio/voice/video_note/video yuborilganda Shazam orqali aniqlash."""
     # file_id ni aniqlash
     if message.audio:
         file_id = message.audio.file_id
@@ -50,6 +50,11 @@ async def handle_audio_for_shazam(
         file_id = message.voice.file_id
     elif message.video_note:
         file_id = message.video_note.file_id
+    elif message.video:
+        # 20MB dan katta videoni Telegram bot API yuklab bera olmaydi
+        if message.video.file_size and message.video.file_size > 20 * 1024 * 1024:
+            return
+        file_id = message.video.file_id
     else:
         return
 
