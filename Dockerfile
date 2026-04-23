@@ -1,6 +1,8 @@
 # ==========================================
 #  Media Downloader Bot — Dockerfile
-#  Python 3.12 + aria2c + ffmpeg + yt-dlp
+#  Python 3.12 + ffmpeg + yt-dlp
+#  Eslatma: aria2 Railway platformasida taqiqlangan,
+#  shuning uchun yt-dlp default downloader'i ishlatiladi.
 # ==========================================
 
 FROM python:3.12-slim AS base
@@ -14,9 +16,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
-# Tizim dasturlari o'rnatish
+# Tizim dasturlari o'rnatish (aria2 siz — Railway ban)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    aria2 \
     ffmpeg \
     curl \
     ca-certificates \
