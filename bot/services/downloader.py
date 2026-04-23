@@ -428,6 +428,37 @@ class Downloader:
         download_time = time.time() - start_time
 
         if not result.get("success"):
+            err = (result.get("error") or "").lower()
+            # Instagram rate-limit / login-required — cobalt.tools fallback
+            is_ig = _detect_platform(url) == "instagram"
+            is_blocked = any(k in err for k in (
+                "rate-limit", "rate limit", "login required",
+                "login_required", "not available", "too many requests",
+                "requires authentication",
+            ))
+            if is_ig and is_blocked and media_type == MediaType.VIDEO:
+                logger.info(f"Instagram rate-limit — cobalt.tools fallback ishga tushmoqda: {url}")
+                try:
+                    from bot.services.ig_fallback import cobalt_download
+                    fb = await cobalt_download(url, self.temp_dir)
+                    if fb and fb.get("file_path"):
+                        fsize = fb.get("filesize", 0)
+                        dt = time.time() - start_time
+                        logger.info(
+                            f"Cobalt fallback tugadi: {fb['file_path']} | "
+                            f"{fsize / 1024 / 1024:.1f}MB | {dt:.1f}s"
+                        )
+                        return DownloadResult(
+                            success=True,
+                            file_path=fb["file_path"],
+                            title=fb.get("title", "Instagram media"),
+                            filesize=fsize,
+                            media_type=media_type,
+                            download_time=dt,
+                        )
+                except Exception as fb_err:
+                    logger.warning(f"Cobalt fallback xatosi: {fb_err}")
+
             logger.error(f"Yuklab olish xatosi: {url} | {result.get('error')}")
             return DownloadResult(
                 success=False,
