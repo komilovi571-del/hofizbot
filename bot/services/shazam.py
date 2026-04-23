@@ -164,12 +164,18 @@ def _sync_search_download(query: str, temp_dir: str) -> dict:
             "socket_timeout": 30,
             "retries": 3,
             "default_search": "ytsearch",
-            # Railway datacenter IP bot-detection'ni aylantirish
+            # Railway datacenter IP bot-detection'ni aylantirish:
+            # mweb/tv_embedded/ios clientlar cookie talab qilmaydi
             "extractor_args": {
                 "youtube": {
-                    "player_client": ["android", "web"],
+                    "player_client": ["mweb", "tv_embedded", "ios", "android_vr"],
                 },
             },
+            "user_agent": (
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+                "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+                "Version/17.0 Mobile/15E148 Safari/604.1"
+            ),
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",

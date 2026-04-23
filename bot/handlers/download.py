@@ -1153,11 +1153,6 @@ async def _send_file(
                 supports_streaming=True,
                 reply_markup=reply_markup,
             )
-            # Avtomatik Shazam — videodagi qo'shiqni aniqlash
-            try:
-                await _auto_shazam_video(bot, chat_id, sent.message_id, result.file_path)
-            except Exception as e:
-                logger.warning(f"Auto-shazam xato: {e}")
         else:
             caption = (
                 f"🎵 <b>{result.title}</b>\n"
