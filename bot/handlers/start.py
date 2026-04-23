@@ -9,6 +9,7 @@ from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Message,
+    ReplyKeyboardRemove,
 )
 
 from bot.i18n import LANG_NAMES, SUPPORTED_LANGS, t
@@ -73,6 +74,13 @@ async def cmd_start(
     user_id = message.from_user.id if message.from_user else 0
     saved_lang = stats_service.get_lang(user_id) if stats_service else None
 
+    # Eski reply-keyboardni (masalan, admin paneldagi "❌ Yopish") tozalash
+    try:
+        tmp = await message.answer("✅", reply_markup=ReplyKeyboardRemove())
+        await tmp.delete()
+    except Exception:
+        pass
+
     if not saved_lang:
         await message.answer(
             t("lang_choose", lang),
@@ -92,6 +100,12 @@ async def cmd_start(
 @router.message(Command("lang"))
 async def cmd_lang(message: Message, lang: str = "uz") -> None:
     """/lang — tilni qayta tanlash."""
+    # Eski reply-keyboardni tozalash
+    try:
+        tmp = await message.answer("🌐", reply_markup=ReplyKeyboardRemove())
+        await tmp.delete()
+    except Exception:
+        pass
     await message.answer(
         t("lang_choose", lang),
         parse_mode="HTML",
