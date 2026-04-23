@@ -1,0 +1,19 @@
+# .dockerignore
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+.env
+.env.example
+.git/
+.gitignore
+.vscode/
+.idea/
+docker-compose*.yml
+Dockerfile
+deploy.sh
+tmp/
+downloads/
+media-downloader-bot/
+*.log
+*.md

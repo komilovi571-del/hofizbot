@@ -1,0 +1,51 @@
+# Media Downloader Bot
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.venv/
+.venv-*/
+env/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker
+docker-compose.override.yml
+
+# Temp files
+tmp/
+temp/
+downloads/
+*.mp4
+*.mp3
+*.m4a
+*.opus
+*.webm
+*.mkv
+*.avi
+*.flv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Runtime data (user stats)
+data/stats.json

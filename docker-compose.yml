@@ -1,0 +1,68 @@
+# ==========================================
+#  Media Downloader Bot — Docker Compose
+#  Lokal dev uchun: bot + redis
+# ==========================================
+
+services:
+  # ─── Bot servisi ───────────────────────────
+  bot:
+    build: .
+    container_name: media-downloader-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - TEMP_DIR=/tmp/media-bot
+      - BOT_MODE=polling
+    volumes:
+      - bot-temp:/tmp/media-bot
+      - bot-data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - bot-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Redis kesh servisi ────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: media-bot-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - bot-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+volumes:
+  bot-temp:
+    driver: local
+  bot-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  bot-network:
+    driver: bridge
